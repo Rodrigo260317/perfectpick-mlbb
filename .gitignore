@@ -48,6 +48,7 @@ download_*.py
 debug-*.js
 test-*.html
 admin-panel.html
+ADMIN_PANEL_GUIDE.md
 
 # Archivos consolidados (mantener solo versión completa)
 DOCUMENTACION.md
