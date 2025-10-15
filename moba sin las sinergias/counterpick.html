@@ -1,0 +1,1945 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asistente de Draft de Mobile Legends</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --ml-blue: #0a1e3a;
+            --ml-gold: #f0b94a;
+            --ml-light-gold: #ffdf85;
+            --ml-dark-blue: #051021;
+            --ml-accent: #6a9cfd;
+            --ally-color: rgba(67, 127, 227, 0.5);
+            --enemy-color: rgba(220, 38, 38, 0.5);
+            --ban-color: rgba(239, 68, 68, 0.7);
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: radial-gradient(ellipse at top, var(--ml-blue), var(--ml-dark-blue));
+            background-attachment: fixed;
+            color: #e0e0e0;
+            overflow: hidden; /* Evita el scroll de la página */
+        }
+
+        .orbitron {
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        .hero-card {
+            transition: all 0.2s ease;
+            cursor: pointer;
+            position: relative;
+            animation: slideInUp 0.5s ease-out forwards;
+            opacity: 0;
+        }
+        
+        .hero-card .hero-image-container {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-card .hero-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            border-radius: 50%;
+        }
+
+        .ban-mode-active .hero-card:hover .hero-image-container {
+            border-color: var(--ban-color) !important;
+            box-shadow: 0 0 10px var(--ban-color);
+        }
+
+        .ban-mode-inactive .hero-card:hover .hero-overlay.left-half {
+            opacity: 1;
+            background: linear-gradient(90deg, var(--enemy-color) 0%, var(--enemy-color) 50%, transparent 50.1%);
+        }
+        .ban-mode-inactive .hero-card:hover .hero-overlay.right-half {
+            opacity: 1;
+            background: linear-gradient(90deg, transparent 49.9%, var(--ally-color) 50%, var(--ally-color) 100%);
+        }
+
+        .hero-card.selected, .hero-card.banned {
+            filter: grayscale(80%) brightness(0.5);
+            pointer-events: none;
+        }
+
+        .hero-card.banned .hero-image-container::after {
+            content: 'BANEADO';
+            position: absolute;
+            inset: 0;
+            background: var(--ban-color);
+            color: white;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 9px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+
+        .team-slot, .ban-slot {
+            border: 1px dashed var(--ml-accent);
+            background: rgba(10, 30, 58, 0.5);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+    /* Aumentar un poco el alto de los slots de equipo para que la imagen se aprecie mejor */
+    .team-slot::before, .ban-slot::before { content: ''; display: block; padding-top: 120%; }
+        .team-slot > *, .ban-slot > * { position: absolute; top: 0; left: 0; height: 100%; width: 100%; }
+
+        .team-slot.filled, .ban-slot.filled {
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+        .team-slot.filled:hover, .ban-slot.filled:hover {
+            transform: scale(1.05);
+            border-color: white;
+        }
+
+        .team-slot.filled {
+            border-style: solid;
+            border-color: var(--ml-gold);
+            background: transparent;
+            animation: fadeIn 0.4s ease-in;
+        }
+        
+        .ban-slot.filled {
+             border-style: solid;
+             border-color: #ef4444;
+             background: transparent;
+             animation: fadeIn 0.4s ease-in;
+        }
+
+
+        .futuristic-panel {
+            background: rgba(10, 30, 58, 0.7);
+            border: 1px solid var(--ml-accent);
+            border-radius: 12px;
+            box-shadow: 0 0 15px rgba(106, 156, 253, 0.3), inset 0 0 10px rgba(10, 30, 58, 0.5);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            animation: pulseGlow 6s infinite ease-in-out alternate;
+        }
+
+        .futuristic-title {
+            color: var(--ml-light-gold);
+            text-shadow: 0 0 8px var(--ml-gold);
+        }
+        
+        .suggestion-card {
+            background: linear-gradient(145deg, rgba(10, 30, 58, 0.8), rgba(5, 16, 33, 0.8));
+            border-left: 3px solid var(--ml-gold);
+            transition: all 0.3s ease;
+            animation: fadeIn 0.5s ease-out forwards;
+            cursor: pointer;
+            min-height: 48px;
+        }
+
+        .suggestion-card:hover {
+             transform: translateX(5px);
+             border-left-color: #fff;
+             box-shadow: 0 4px 12px rgba(106, 156, 253, 0.4);
+        }
+        /* Botón pequeño para seleccionar desde la lista de sugerencias */
+        .pick-btn {
+            width: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            border: 0;
+            cursor: pointer;
+            padding: 4px 6px;
+            color: #cdeffd;
+            opacity: 0.95;
+        }
+        .pick-btn:hover { background: rgba(255,255,255,0.02); }
+        
+        .modal-backdrop {
+            background-color: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+            opacity: 0;
+            visibility: hidden;
+        }
+        
+        .modal-backdrop.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            transform: scale(0.9);
+            opacity: 0;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+
+        .modal-backdrop.visible .modal-content {
+            transform: scale(1);
+            opacity: 1;
+        }
+
+        .glow-divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--ml-accent), transparent);
+        }
+        
+        .role-btn, .btn-futuristic {
+            background: rgba(10, 30, 58, 0.6);
+            border: 1px solid var(--ml-accent);
+            transition: all 0.2s ease-in-out;
+            text-align: center;
+            cursor: pointer;
+        }
+        .role-btn:hover, .btn-futuristic:hover {
+            background: rgba(106, 156, 253, 0.3);
+        }
+        .role-btn.active {
+            background: var(--ml-gold);
+            color: var(--ml-dark-blue);
+            font-weight: bold;
+            border-color: var(--ml-light-gold);
+            box-shadow: 0 0 10px var(--ml-gold);
+        }
+
+        #toggle-ban-mode-btn.ban-active {
+            background: var(--ban-color);
+            border-color: #fca5a5;
+            color: white;
+            box-shadow: 0 0 10px var(--ban-color);
+        }
+
+        .locked {
+            filter: blur(5px);
+            pointer-events: none;
+            transition: filter 0.3s ease;
+        }
+
+        .score {
+            font-family: 'Orbitron', sans-serif;
+            text-shadow: 0 0 5px #fff;
+        }
+        .score-positive { color: #4ade80; }
+        .score-negative { color: #f87171; }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--ml-dark-blue); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb { background-color: var(--ml-accent); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background-color: var(--ml-gold); }
+
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        @keyframes slideInUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes pulseGlow {
+            from { box-shadow: 0 0 15px rgba(106, 156, 253, 0.3), inset 0 0 10px rgba(10, 30, 58, 0.5); }
+            to { box-shadow: 0 0 25px rgba(106, 156, 253, 0.6), inset 0 0 15px rgba(10, 30, 58, 0.7); }
+        }
+        /* Resaltado para sugerencias: cuando se pasa el cursor por una sugerencia, los slots del equipo enemigo se iluminan */
+        .enemy-highlight {
+            box-shadow: 0 0 12px #34d399 !important; /* verde suave */
+            border-color: #10b981 !important;
+        }
+        /* Barras laterales para baneos */
+        .ban-sidebar {
+            position: fixed;
+            top: 100px;
+            bottom: 24px;
+            width: 84px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            align-items: center;
+            z-index: 80;
+            pointer-events: auto;
+            background: linear-gradient(180deg, rgba(10,16,30,0.35), rgba(10,16,30,0.25));
+            border-radius: 8px;
+            padding: 8px 6px;
+        }
+        #ban-slots-left { left: 12px; }
+        #ban-slots-right { right: 12px; }
+        .ban-sidebar .ban-slot { width: 56px; height: 56px; }
+        .ban-label { color: #ef4444; font-weight: 800; margin-bottom: 6px; font-family: 'Orbitron', sans-serif; }
+    .ban-list { flex: 1 1 auto; display: flex; flex-direction: column; justify-content: space-around; align-items: center; width: 100%; padding: 6px 0; }
+
+        /* Responsive: en pantallas pequeñas mover los baneos a barra inferior horizontal */
+        @media (max-width: 1024px) {
+            .ban-sidebar { top: auto; bottom: 8px; left: 8px; right: 8px; width: auto; height: 64px; flex-direction: row; padding: 6px; justify-content: center; gap: 10px; }
+            .ban-sidebar .ban-label { display: none; }
+            .ban-list { flex-direction: row; justify-content: center; align-items: center; gap: 8px; height: 100%; }
+            .ban-sidebar .ban-slot { width: 44px; height: 44px; }
+        }
+        /* Hacer que cada ban-slot sea cuadrado y escale con altura disponible, manteniendo separación */
+        .ban-sidebar .ban-slot {
+            width: clamp(44px, 8vw, 96px);
+            height: clamp(44px, 8vh, 120px);
+            aspect-ratio: 1 / 1;
+            max-width: 100%;
+        }
+
+        /* === OPTIMIZACIÓN PARA MÓVILES === */
+        @media (max-width: 768px) {
+            body { overflow-y: auto; overflow-x: hidden; }
+            #app { height: auto; min-height: 100vh; padding: 8px 4px; }
+            
+            /* Header más compacto */
+            header { margin-bottom: 8px; }
+            header h1 { font-size: 1.25rem; line-height: 1.3; }
+            header p { font-size: 0.65rem; }
+            
+            /* Pool de héroes más compacto */
+            #hero-pool { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; max-height: 40vh; }
+            .hero-card .hero-image-container { width: 48px; height: 48px; }
+            .hero-card span { font-size: 9px; margin-top: 2px; }
+            
+            /* Slots de equipo más grandes y legibles */
+            .team-slot, .ban-slot { border-width: 2px; }
+            #enemy-team-slots, #ally-team-slots { gap: 4px; }
+            
+            /* Paneles futuristas más compactos */
+            .futuristic-panel { padding: 8px; }
+            .futuristic-panel h2 { font-size: 0.9rem; margin-bottom: 8px; }
+            
+            /* Selector de rol más compacto */
+            #role-selector h3 { font-size: 0.75rem; margin-bottom: 4px; }
+            #role-selector .grid { gap: 2px; }
+            .role-btn { padding: 4px 6px; font-size: 0.7rem; }
+            
+            /* Sugerencias más compactas */
+            .suggestion-card { padding: 6px; gap: 4px; min-height: 40px; }
+            .suggestion-card img { width: 28px; height: 28px; }
+            .suggestion-card span { font-size: 0.75rem; }
+            .score { font-size: 0.8rem; }
+            
+            /* Botones de control más compactos */
+            #search-hero { width: 80px; font-size: 0.7rem; padding: 4px 6px; }
+            .btn-futuristic { padding: 4px 8px; font-size: 0.7rem; }
+            
+            /* Ajustar grid principal para móvil vertical */
+            main { grid-template-columns: 1fr; gap: 12px; }
+            main > * { order: initial !important; }
+            
+            /* Baneos en barra inferior más compacta */
+            .ban-sidebar { bottom: 4px; height: 48px; gap: 4px; }
+            .ban-sidebar .ban-slot { width: 36px; height: 36px; }
+        }
+
+        /* === MÓVIL HORIZONTAL (LANDSCAPE) === */
+        @media (max-width: 926px) and (orientation: landscape) {
+            body { overflow: hidden; }
+            #app { height: 100vh; padding: 4px; display: flex; flex-direction: column; }
+            
+            /* Header ultra compacto */
+            header { margin-bottom: 4px; padding: 2px 0; }
+            header h1 { font-size: 1rem; }
+            header p { display: none; }
+            
+            /* Grid optimizado para horizontal: 3 columnas */
+            main { 
+                grid-template-columns: minmax(180px, 1fr) minmax(280px, 2fr) minmax(180px, 1fr);
+                gap: 6px;
+                flex: 1;
+                min-height: 0;
+            }
+            
+            /* Columna izquierda (enemigos + análisis) */
+            main > div:nth-child(1) { 
+                display: flex; 
+                flex-direction: column; 
+                gap: 6px;
+                min-height: 0;
+            }
+            main > div:nth-child(1) > section:first-child { flex: 0 0 auto; }
+            main > div:nth-child(1) > section:last-child { flex: 1; min-height: 0; overflow-y: auto; }
+            
+            /* Columna central (pool de héroes) */
+            main > div:nth-child(2) { 
+                display: flex; 
+                flex-direction: column;
+                min-height: 0;
+            }
+            #hero-pool { 
+                grid-template-columns: repeat(7, minmax(0, 1fr)); 
+                gap: 3px; 
+                max-height: none;
+                flex: 1;
+                overflow-y: auto;
+            }
+            .hero-card .hero-image-container { width: 36px; height: 36px; }
+            .hero-card span { font-size: 7px; }
+            
+            /* Columna derecha (aliados + sinergia) */
+            main > div:nth-child(3) { 
+                display: flex; 
+                flex-direction: column; 
+                gap: 6px;
+                min-height: 0;
+            }
+            main > div:nth-child(3) > section:first-child { flex: 0 0 auto; }
+            main > div:nth-child(3) > section:last-child { flex: 1; min-height: 0; overflow-y: auto; }
+            
+            /* Paneles ultra compactos */
+            .futuristic-panel { padding: 6px; }
+            .futuristic-panel h2 { font-size: 0.75rem; margin-bottom: 4px; }
+            
+            /* Slots de equipo compactos */
+            #enemy-team-slots, #ally-team-slots { gap: 3px; }
+            .team-slot::before, .ban-slot::before { padding-top: 100%; }
+            
+            /* Selector de rol inline */
+            #role-selector { margin-bottom: 4px; }
+            #role-selector h3 { font-size: 0.65rem; margin-bottom: 2px; }
+            #role-selector .grid { grid-template-columns: repeat(6, 1fr); gap: 2px; }
+            .role-btn { padding: 2px 4px; font-size: 0.65rem; }
+            
+            /* Sugerencias ultra compactas */
+            #suggestions-content, #synergy-suggestions-content { min-height: 120px; gap: 4px; }
+            .suggestion-card { padding: 4px; }
+            .suggestion-card img { width: 20px; height: 20px; }
+            .suggestion-card span, .score { font-size: 0.65rem; }
+            .pick-btn { width: 24px; }
+            .pick-btn svg { width: 12px; height: 12px; }
+            
+            /* Controles superiores más compactos */
+            #search-hero { width: 60px; font-size: 0.65rem; padding: 2px 4px; }
+            .btn-futuristic { padding: 2px 6px; font-size: 0.65rem; }
+            
+            /* Baneos en barra inferior ultra compacta */
+            .ban-sidebar { bottom: 2px; height: 40px; gap: 3px; padding: 3px; }
+            .ban-sidebar .ban-slot { width: 32px; height: 32px; }
+            .ban-sidebar .ban-slot img { border-radius: 4px; }
+        }
+
+        /* === MÓVIL VERTICAL (PORTRAIT) === */
+        @media (max-width: 480px) and (orientation: portrait) {
+            /* Pool de héroes 5 columnas para más espacio vertical */
+            #hero-pool { 
+                grid-template-columns: repeat(5, minmax(0, 1fr)); 
+                max-height: 40vh;
+            }
+            .hero-card .hero-image-container { width: 48px; height: 48px; }
+            .hero-card span { font-size: 9px; }
+            
+            /* Slots de equipo en fila única para ahorrar espacio */
+            #enemy-team-slots, #ally-team-slots { 
+                grid-template-columns: repeat(5, 1fr);
+                gap: 6px;
+            }
+            
+            /* Sugerencias en una sola columna */
+            #suggestions-content .grid,
+            #synergy-suggestions-content .grid {
+                grid-template-columns: 1fr !important;
+            }
+        }
+
+        /* Cuando las barras laterales no quepan (pantallas intermedias), moverlas cerca del título en horizontal sin etiqueta y hacer slots circulares */
+        @media (max-width: 1200px) and (min-width: 769px) {
+            /* posicionar a la altura del header */
+            .ban-sidebar {
+                top: 18px;
+                bottom: auto;
+                height: auto;
+                width: auto;
+                background: transparent;
+                padding: 0 6px;
+                gap: 6px;
+                box-shadow: none;
+            }
+            .ban-sidebar .ban-label { display: none !important; }
+            .ban-list { flex-direction: row; justify-content: center; align-items: center; gap: 6px; }
+            .ban-sidebar .ban-slot { width: clamp(28px, 5vw, 44px); height: clamp(28px, 5vw, 44px); border-radius: 50%; overflow: hidden; border: 1px solid rgba(255,255,255,0.06); }
+            /* aproximar a los lados del título (centrado) */
+            #ban-slots-left { left: calc(50% - 360px); }
+            #ban-slots-right { left: calc(50% + 240px); }
+        }
+
+        /* Evitar que las sugerencias se apachurren hacia arriba; ocupar espacio vertical y distribuir contenido */
+        #suggestions-content, #synergy-suggestions-content {
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            gap: 12px;
+            height: 100%;
+            min-height: 280px;
+        }
+
+        /* Mejorar distribución de las columnas de sugerencias */
+        #suggestions-content > .grid,
+        #synergy-suggestions-content > .grid {
+            height: 100%;
+            align-items: start;
+        }
+
+        /* === ESTILOS PARA HÉROES DESHABILITADOS === */
+        .hero-card.disabled {
+            opacity: 0.65;
+            filter: grayscale(60%);
+        }
+
+        .hero-card.disabled .hero-image-container::after {
+            content: '🚫';
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            width: 20px;
+            height: 20px;
+            background: rgba(239, 68, 68, 0.9);
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            border: 2px solid var(--ml-dark-blue);
+            box-shadow: 0 0 6px rgba(239, 68, 68, 0.8);
+        }
+
+        .hero-card.disabled:hover {
+            opacity: 0.85;
+        }
+
+        /* Modal de gestión de héroes deshabilitados */
+        .disabled-heroes-modal {
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+
+        .disabled-hero-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 12px;
+            background: rgba(10, 30, 58, 0.5);
+            border: 1px solid var(--ml-accent);
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .disabled-hero-item:hover {
+            background: rgba(106, 156, 253, 0.2);
+            border-color: var(--ml-gold);
+        }
+
+        .disabled-hero-item button {
+            background: rgba(239, 68, 68, 0.7);
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            transition: all 0.2s ease;
+        }
+
+        .disabled-hero-item button:hover {
+            background: rgba(239, 68, 68, 1);
+            transform: scale(1.05);
+        }
+
+        /* Tooltip para el botón de gestionar */
+        .tooltip-hint {
+            position: relative;
+        }
+
+        .tooltip-hint::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(10, 30, 58, 0.95);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            margin-bottom: 4px;
+            border: 1px solid var(--ml-accent);
+        }
+
+        .tooltip-hint:hover::after {
+            opacity: 1;
+        }
+
+        /* Mejorar espaciado en listas de sugerencias */
+        .suggestion-list-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            overflow-y: auto;
+            max-height: 280px;
+            padding-right: 4px;
+        }
+
+        .suggestion-list-container::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        /* Animación de carga */
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <div id="initial-role-modal" class="fixed inset-0 z-[100] flex items-center justify-center modal-backdrop visible px-4">
+        <div class="futuristic-panel p-4 sm:p-6 rounded-lg text-center w-full max-w-sm modal-content">
+            <h3 class="orbitron text-lg sm:text-xl futuristic-title mb-4 sm:mb-6">Selecciona tu rol</h3>
+            <div id="initial-role-selector" class="grid grid-cols-2 sm:flex sm:flex-wrap justify-center gap-2 sm:gap-3 text-sm sm:text-base">
+                <button data-role="EXP" class="role-btn p-3 sm:p-4 rounded-md">EXP</button>
+                <button data-role="Jungla" class="role-btn p-3 sm:p-4 rounded-md">Jungla</button>
+                <button data-role="Mid" class="role-btn p-3 sm:p-4 rounded-md">Mid</button>
+                <button data-role="Gold" class="role-btn p-3 sm:p-4 rounded-md">Gold</button>
+                <button data-role="Roam" class="role-btn p-3 sm:p-4 col-span-2 sm:col-span-1 rounded-md">Roam</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="app" class="max-w-screen-2xl mx-auto flex flex-col h-screen p-2 sm:p-3 lg:p-4 locked">
+        <header class="text-center mb-2">
+            <h1 class="orbitron text-2xl sm:text-3xl lg:text-4xl font-bold futuristic-title">MLBB DRAFT</h1>
+            <p class="text-xs sm:text-sm text-gray-400">Análisis v3.2</p>
+        </header>
+
+        <!-- Sección de baneos movida a las barras laterales -->
+
+        <main class="grid grid-cols-12 gap-3 flex-grow min-h-0">
+            <div class="col-span-12 lg:col-span-3 order-2 lg:order-1 flex flex-col gap-3 min-h-0">
+                <section class="futuristic-panel p-3">
+                    <h2 class="orbitron text-lg text-red-400 text-shadow mb-2 text-center">ENEMIGOS</h2>
+                    <div id="enemy-team-slots" class="grid grid-cols-5 gap-2"></div>
+                </section>
+                <section class="futuristic-panel p-3 flex-grow overflow-y-auto">
+                    <h2 class="orbitron text-lg futuristic-title mb-2 text-center">COUNTERS</h2>
+                    <div id="suggestions-content" class="space-y-3"></div>
+                </section>
+            </div>
+
+            <div class="col-span-12 lg:col-span-6 order-1 lg:order-2 futuristic-panel p-3 flex flex-col min-h-0">
+                <div class="flex flex-col sm:flex-row justify-between items-center mb-2 gap-2">
+                     <h2 class="orbitron text-lg futuristic-title mb-0 sm:mb-0">HÉROES</h2>
+                     <div class="flex gap-1 sm:gap-2 flex-wrap justify-center">
+                        <input type="text" id="search-hero" placeholder="Buscar..." class="bg-[#1a2332] border border-ml-accent rounded-lg px-2 py-1 text-sm text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-ml-gold w-24 sm:w-32">
+                        <button id="manage-disabled-btn" class="btn-futuristic rounded-lg px-2 sm:px-3 py-1 text-xs whitespace-nowrap relative" title="Ocultar héroes de sugerencias (seguirán siendo seleccionables)">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 inline">
+                                <path d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <span class="hidden sm:inline ml-1">Ocultar</span>
+                            <span id="disabled-count-badge" class="hidden absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold"></span>
+                        </button>
+                        <button id="toggle-ban-mode-btn" class="btn-futuristic rounded-lg px-2 sm:px-3 py-1 text-xs whitespace-nowrap">BAN</button>
+                        <button id="reset-draft-btn" class="btn-futuristic rounded-lg px-2 sm:px-3 py-1 text-xs whitespace-nowrap">RESET</button>
+                     </div>
+                </div>
+                <div id="hero-pool" class="grid grid-cols-6 sm:grid-cols-7 md:grid-cols-8 lg:grid-cols-9 gap-2 overflow-y-auto flex-grow ban-mode-inactive"></div>
+            </div>
+
+            <div class="col-span-12 lg:col-span-3 order-3 flex flex-col gap-3 min-h-0">
+                <section class="futuristic-panel p-3">
+                    <h2 class="orbitron text-lg text-blue-400 text-shadow mb-2 text-center">ALIADOS</h2>
+                    <div id="role-selector" class="mb-2">
+                        <h3 class="orbitron text-sm futuristic-title mb-2 text-center">MI ROL</h3>
+                        <div class="grid grid-cols-3 gap-1 text-xs">
+                            <button data-role="Todos" class="role-btn py-1 px-2 rounded-md">Todos</button>
+                            <button data-role="EXP" class="role-btn py-1 px-2 rounded-md">EXP</button>
+                            <button data-role="Jungla" class="role-btn py-1 px-2 rounded-md">JG</button>
+                            <button data-role="Mid" class="role-btn py-1 px-2 rounded-md">Mid</button>
+                            <button data-role="Gold" class="role-btn py-1 px-2 rounded-md">Gold</button>
+                            <button data-role="Roam" class="role-btn py-1 px-2 rounded-md">Roam</button>
+                        </div>
+                    </div>
+                     <div class="glow-divider mb-2"></div>
+                    <div id="ally-team-slots" class="grid grid-cols-5 gap-2"></div>
+                </section>
+                <section class="futuristic-panel p-3 flex-grow overflow-y-auto">
+                    <h2 class="orbitron text-lg futuristic-title mb-2 text-center">SINERGIA</h2>
+                    <div id="synergy-suggestions-content" class="space-y-3"></div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <div id="explanation-modal" class="fixed inset-0 z-[60] flex items-center justify-center modal-backdrop">
+        <div class="futuristic-panel p-6 rounded-lg w-11/12 max-w-md modal-content">
+            <div id="explanation-content"></div>
+            <button id="explanation-modal-close" class="mt-4 text-gray-400 hover:text-white absolute top-2 right-4 text-2xl">&times;</button>
+        </div>
+    </div>
+
+    <!-- Modal para gestionar héroes deshabilitados -->
+    <div id="disabled-heroes-modal" class="fixed inset-0 z-[60] flex items-center justify-center modal-backdrop">
+        <div class="futuristic-panel p-6 rounded-lg w-11/12 max-w-2xl modal-content disabled-heroes-modal">
+            <h3 class="orbitron text-xl futuristic-title mb-4 text-center">Héroes Ocultos en Sugerencias</h3>
+            <p class="text-sm text-gray-400 mb-4 text-center">
+                Estos héroes NO aparecerán en las sugerencias, pero <strong>SÍ puedes seleccionarlos manualmente</strong> para cualquier equipo.<br>
+                <span class="text-xs text-gray-500">Haz clic derecho en cualquier héroe del pool para marcarlo/desmarcarlo.</span>
+            </p>
+            <div id="disabled-heroes-list" class="space-y-2 mb-4"></div>
+            <div class="flex justify-center gap-4">
+                <button id="clear-all-disabled-btn" class="btn-futuristic rounded-lg px-4 py-2 text-sm">Mostrar Todos</button>
+                <button id="disabled-modal-close" class="btn-futuristic rounded-lg px-4 py-2 text-sm">Cerrar</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Barras laterales de baneos (5 slots a la izquierda y 5 a la derecha) -->
+    <div id="ban-slots-left" class="ban-sidebar">
+        <div class="ban-label">BANS</div>
+        <div class="ban-list" id="ban-list-left"></div>
+    </div>
+    <div id="ban-slots-right" class="ban-sidebar">
+        <div class="ban-label">BANS</div>
+        <div class="ban-list" id="ban-list-right"></div>
+    </div>
+    
+    <script src="hero_ratings.js"></script>
+    <script src="heroIcons.js"></script>
+    <script src="meta_heroes.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+
+    // === SISTEMA DE HÉROES DESHABILITADOS (localStorage) ===
+    const DISABLED_HEROES_KEY = 'mlbb_disabled_heroes';
+    let disabledHeroes = [];
+
+    // Cargar héroes deshabilitados del localStorage
+    const loadDisabledHeroes = () => {
+        try {
+            const stored = localStorage.getItem(DISABLED_HEROES_KEY);
+            disabledHeroes = stored ? JSON.parse(stored) : [];
+        } catch (e) {
+            console.error('Error al cargar héroes deshabilitados:', e);
+            disabledHeroes = [];
+        }
+    };
+
+    // Guardar héroes deshabilitados en localStorage
+    const saveDisabledHeroes = () => {
+        try {
+            localStorage.setItem(DISABLED_HEROES_KEY, JSON.stringify(disabledHeroes));
+        } catch (e) {
+            console.error('Error al guardar héroes deshabilitados:', e);
+        }
+    };
+
+    // Deshabilitar un héroe
+    const disableHero = (heroId) => {
+        if (!disabledHeroes.includes(heroId)) {
+            disabledHeroes.push(heroId);
+            saveDisabledHeroes();
+            renderHeroPool();
+            updateAllSuggestions();
+            updateDisabledCountBadge();
+        }
+    };
+
+    // Habilitar un héroe
+    const enableHero = (heroId) => {
+        const index = disabledHeroes.indexOf(heroId);
+        if (index > -1) {
+            disabledHeroes.splice(index, 1);
+            saveDisabledHeroes();
+            renderHeroPool();
+            updateAllSuggestions();
+            updateDisabledCountBadge();
+        }
+    };
+
+    // Actualizar badge de contador
+    const updateDisabledCountBadge = () => {
+        if (disabledHeroes.length > 0) {
+            disabledCountBadge.textContent = disabledHeroes.length;
+            disabledCountBadge.classList.remove('hidden');
+        } else {
+            disabledCountBadge.classList.add('hidden');
+        }
+    };
+
+    // Verificar si un héroe está deshabilitado
+    const isHeroDisabled = (heroId) => {
+        return disabledHeroes.includes(heroId);
+    };
+
+    // Cargar al inicio
+    loadDisabledHeroes();
+
+    // Utilidad para obtener el icono real del héroe por nombre (case-insensitive)
+    function getHeroIcon(heroName) {
+        if (!Array.isArray(heroIcons)) return '';
+        // Buscar por nombre exacto o con minúsculas
+        let found = heroIcons.find(h => h.name.toLowerCase() === heroName.toLowerCase());
+        if (!found) {
+            // Intentar buscar por nombre sin espacios ni guiones
+            const clean = heroName.replace(/[-\s']/g, '').toLowerCase();
+            found = heroIcons.find(h => h.name.replace(/[-\s']/g, '').toLowerCase() === clean);
+        }
+        return found ? found.icon : '';
+    }
+
+    // --- MODO DE DESARROLLO ---
+    if (typeof heroRatings === 'undefined') {
+        console.warn('ADVERTENCIA: El archivo hero_ratings.js no se encontró. El programa se ejecutará en modo de desarrollo sin el sistema de puntuación.');
+        window.heroRatings = {};
+    }
+
+    const heroesData = [
+  { "id": "aamon", "name": "Aamon", "lanes": ["Jungla", "Mid"] },
+  { "id": "akai", "name": "Akai", "lanes": ["Roam", "Jungla"] },
+  { "id": "aldous", "name": "Aldous", "lanes": ["EXP"] },
+  { "id": "alice", "name": "Alice", "lanes": ["EXP", "Mid"] },
+  { "id": "alpha", "name": "Alpha", "lanes": ["EXP", "Jungla"] },
+  { "id": "alucard", "name": "Alucard", "lanes": ["Jungla", "EXP"] },
+  { "id": "angela", "name": "Angela", "lanes": ["Roam"] },
+  { "id": "argus", "name": "Argus", "lanes": ["EXP"] },
+  { "id": "arlott", "name": "Arlott", "lanes": ["EXP", "Jungla"] },
+  { "id": "atlas", "name": "Atlas", "lanes": ["Roam"] },
+  { "id": "aulus", "name": "Aulus", "lanes": ["Jungla"] },
+  { "id": "aurora", "name": "Aurora", "lanes": ["Mid"] },
+  { "id": "badang", "name": "Badang", "lanes": ["EXP"] },
+  { "id": "balmond", "name": "Balmond", "lanes": ["EXP", "Jungla"] },
+  { "id": "bane", "name": "Bane", "lanes": ["EXP", "Jungla"] },
+  { "id": "barats", "name": "Barats", "lanes": ["Jungla", "EXP", "Roam"] },
+  { "id": "baxia", "name": "Baxia", "lanes": ["Roam", "Jungla"] },
+  { "id": "beatrix", "name": "Beatrix", "lanes": ["Gold"] },
+  { "id": "belerick", "name": "Belerick", "lanes": ["Roam"] },
+  { "id": "benedetta", "name": "Benedetta", "lanes": ["EXP", "Jungla"] },
+  { "id": "brody", "name": "Brody", "lanes": ["Gold"] },
+  { "id": "bruno", "name": "Bruno", "lanes": ["Gold"] },
+  { "id": "carmilla", "name": "Carmilla", "lanes": ["Roam"] },
+  { "id": "cecilion", "name": "Cecilion", "lanes": ["Mid"] },
+  { "id": "chang'e", "name": "Chang'e", "lanes": ["Mid"] },
+  { "id": "chip", "name": "Chip", "lanes": ["Roam"] },
+  { "id": "chou", "name": "Chou", "lanes": ["EXP", "Roam"] },
+  { "id": "cici", "name": "Cici", "lanes": ["EXP"] },
+  { "id": "claude", "name": "Claude", "lanes": ["Gold"] },
+  { "id": "clint", "name": "Clint", "lanes": ["Gold"] },
+  { "id": "cyclops", "name": "Cyclops", "lanes": ["Mid"] },
+  { "id": "diggie", "name": "Diggie", "lanes": ["Roam"] },
+  { "id": "dyrroth", "name": "Dyrroth", "lanes": ["EXP"] },
+  { "id": "edith", "name": "Edith", "lanes": ["Roam", "EXP"] },
+  { "id": "esmeralda", "name": "Esmeralda", "lanes": ["EXP", "Roam"] },
+  { "id": "estes", "name": "Estes", "lanes": ["Roam"] },
+  { "id": "eudora", "name": "Eudora", "lanes": ["Mid", "Roam"] },
+  { "id": "fanny", "name": "Fanny", "lanes": ["Jungla"] },
+  { "id": "faramis", "name": "Faramis", "lanes": ["Mid", "Roam"] },
+  { "id": "floryn", "name": "Floryn", "lanes": ["Roam"] },
+  { "id": "franco", "name": "Franco", "lanes": ["Roam"] },
+  { "id": "fredrinn", "name": "Fredrinn", "lanes": ["Jungla", "EXP", "Roam"] },
+  { "id": "freya", "name": "Freya", "lanes": ["EXP", "Jungla"] },
+  { "id": "gatotkaca", "name": "Gatotkaca", "lanes": ["Roam", "EXP"] },
+  { "id": "gloo", "name": "Gloo", "lanes": ["Roam", "EXP"] },
+  { "id": "gord", "name": "Gord", "lanes": ["Mid"] },
+  { "id": "granger", "name": "Granger", "lanes": ["Gold", "Jungla"] },
+  { "id": "grock", "name": "Grock", "lanes": ["Roam", "EXP"] },
+  { "id": "guinevere", "name": "Guinevere", "lanes": ["EXP", "Mid"] },
+  { "id": "gusion", "name": "Gusion", "lanes": ["Jungla", "Mid"] },
+  { "id": "hanabi", "name": "Hanabi", "lanes": ["Gold"] },
+  { "id": "hanzo", "name": "Hanzo", "lanes": ["Jungla"] },
+  { "id": "harith", "name": "Harith", "lanes": ["Mid", "Gold"] },
+  { "id": "harley", "name": "Harley", "lanes": ["Jungla", "Mid"] },
+  { "id": "hayabusa", "name": "Hayabusa", "lanes": ["Jungla"] },
+  { "id": "helcurt", "name": "Helcurt", "lanes": ["Jungla"] },
+  { "id": "hilda", "name": "Hilda", "lanes": ["Roam", "EXP", "Jungla"] },
+  { "id": "hylos", "name": "Hylos", "lanes": ["Roam"] },
+  { "id": "irithel", "name": "Irithel", "lanes": ["Gold"] },
+  { "id": "ixia", "name": "Ixia", "lanes": ["Gold"] },
+  { "id": "jawhead", "name": "Jawhead", "lanes": ["EXP", "Roam", "Jungla"] },
+  { "id": "johnson", "name": "Johnson", "lanes": ["Roam"] },
+  { "id": "joy", "name": "Joy", "lanes": ["EXP", "Jungla"] },
+  { "id": "julian", "name": "Julian", "lanes": ["EXP", "Mid", "Jungla"] },
+  { "id": "kadita", "name": "Kadita", "lanes": ["Mid", "Roam"] },
+  { "id": "kagura", "name": "Kagura", "lanes": ["Mid"] },
+  { "id": "kaja", "name": "Kaja", "lanes": ["Roam"] },
+  { "id": "karina", "name": "Karina", "lanes": ["Jungla"] },
+  { "id": "karrie", "name": "Karrie", "lanes": ["Gold"] },
+  { "id": "khaleed", "name": "Khaleed", "lanes": ["EXP"] },
+  { "id": "khufra", "name": "Khufra", "lanes": ["Roam"] },
+  { "id": "kimmy", "name": "Kimmy", "lanes": ["Gold", "Mid"] },
+  { "id": "lancelot", "name": "Lancelot", "lanes": ["Jungla"] },
+  { "id": "lapu-lapu", "name": "Lapu-Lapu", "lanes": ["EXP"] },
+  { "id": "layla", "name": "Layla", "lanes": ["Gold"] },
+  { "id": "leomord", "name": "Leomord", "lanes": ["EXP", "Jungla"] },
+  { "id": "lesley", "name": "Lesley", "lanes": ["Gold"] },
+  { "id": "ling", "name": "Ling", "lanes": ["Jungla"] },
+  { "id": "lolita", "name": "Lolita", "lanes": ["Roam"] },
+  { "id": "lunox", "name": "Lunox", "lanes": ["Mid", "Gold"] },
+  { "id": "luo yi", "name": "Luo Yi", "lanes": ["Mid"] },
+  { "id": "lylia", "name": "Lylia", "lanes": ["Mid"] },
+  { "id": "martis", "name": "Martis", "lanes": ["Jungla", "EXP"] },
+  { "id": "masha", "name": "Masha", "lanes": ["EXP"] },
+  { "id": "mathilda", "name": "Mathilda", "lanes": ["Roam"] },
+  { "id": "melissa", "name": "Melissa", "lanes": ["Gold"] },
+  { "id": "minsitthar", "name": "Minsitthar", "lanes": ["EXP", "Roam"] },
+  { "id": "minotaur", "name": "Minotaur", "lanes": ["Roam"] },
+  { "id": "miya", "name": "Miya", "lanes": ["Gold"] },
+  { "id": "moskov", "name": "Moskov", "lanes": ["Gold"] },
+  { "id": "nana", "name": "Nana", "lanes": ["Mid", "Roam"] },
+  { "id": "natan", "name": "Natan", "lanes": ["Gold"] },
+  { "id": "natalia", "name": "Natalia", "lanes": ["Roam"] },
+  { "id": "nolan", "name": "Nolan", "lanes": ["Jungla"] },
+  { "id": "novaria", "name": "Novaria", "lanes": ["Mid", "Roam"] },
+  { "id": "odette", "name": "Odette", "lanes": ["Mid"] },
+  { "id": "paquito", "name": "Paquito", "lanes": ["EXP", "Jungla"] },
+  { "id": "pharsa", "name": "Pharsa", "lanes": ["Mid"] },
+  { "id": "phoveus", "name": "Phoveus", "lanes": ["EXP"] },
+  { "id": "popol y kupa", "name": "Popol y Kupa", "lanes": ["Gold", "Roam"] },
+  { "id": "rafaela", "name": "Rafaela", "lanes": ["Roam"] },
+  { "id": "roger", "name": "Roger", "lanes": ["Jungla"] },
+  { "id": "ruby", "name": "Ruby", "lanes": ["EXP", "Roam"] },
+  { "id": "saber", "name": "Saber", "lanes": ["Jungla", "Roam"] },
+  { "id": "selena", "name": "Selena", "lanes": ["Mid", "Roam"] },
+  { "id": "silvanna", "name": "Silvanna", "lanes": ["EXP", "Roam"] },
+  { "id": "sun", "name": "Sun", "lanes": ["EXP"] },
+  { "id": "suyou", "name": "Suyou", "lanes": ["EXP", "Jungla"] },
+  { "id": "terizla", "name": "Terizla", "lanes": ["EXP"] },
+  { "id": "thamuz", "name": "Thamuz", "lanes": ["EXP"] },
+  { "id": "tigreal", "name": "Tigreal", "lanes": ["Roam"] },
+  { "id": "uranus", "name": "Uranus", "lanes": ["EXP"] },
+  { "id": "vale", "name": "Vale", "lanes": ["Mid"] },
+  { "id": "valentina", "name": "Valentina", "lanes": ["Mid"] },
+  { "id": "valir", "name": "Valir", "lanes": ["Mid"] },
+  { "id": "vexana", "name": "Vexana", "lanes": ["Mid"] },
+  { "id": "wanwan", "name": "Wanwan", "lanes": ["Gold"] },
+  { "id": "x.borg", "name": "X.Borg", "lanes": ["EXP"] },
+  { "id": "xavier", "name": "Xavier", "lanes": ["Mid"] },
+  { "id": "yin", "name": "Yin", "lanes": ["EXP", "Jungla"] },
+  { "id": "yi sun-shin", "name": "Yi Sun-shin", "lanes": ["Gold", "Jungla"] },
+  { "id": "yve", "name": "Yve", "lanes": ["Mid"] },
+  { "id": "zetian", "name": "Zetian", "lanes": ["Mid"] },
+  { "id": "zhask", "name": "Zhask", "lanes": ["Mid"] },
+  { "id": "zhuxin", "name": "Zhuxin", "lanes": ["Mid"] },
+  { "id": "zilong", "name": "Zilong", "lanes": ["EXP"] },
+  { "id": "yu zhong", "name": "Yu Zhong", "lanes": ["EXP"] },
+  { "id": "obsidia", "name": "Obsidia", "lanes": ["Gold"] },
+  { "id": "lukas", "name": "Lukas", "lanes": ["EXP", "Jungla"] },
+  { "id": "kalea", "name": "Kalea", "lanes": ["Roam"] }
+].sort((a, b) => a.name.localeCompare(b.name));
+
+    let enemyTeam = [];
+    let allyTeam = [];
+    let bannedHeroes = [];
+    let isBanMode = false;
+    let selectedRole = 'Todos';
+
+    const [heroPoolEl, enemySlotsEl, allySlotsEl, suggestionsContentEl, synergySuggestionsContentEl, searchInput, roleSelectorEl, initialRoleModal, initialRoleSelector, appEl, explanationModalEl, explanationContentEl, resetDraftBtn, toggleBanModeBtn, banLeftEl, banRightEl, banListLeft, banListRight, manageDisabledBtn, disabledHeroesModal, disabledHeroesList, clearAllDisabledBtn, disabledModalClose, disabledCountBadge] = [
+        'hero-pool', 'enemy-team-slots', 'ally-team-slots', 'suggestions-content', 'synergy-suggestions-content', 'search-hero', 'role-selector', 'initial-role-modal', 'initial-role-selector', 'app', 'explanation-modal', 'explanation-content', 'reset-draft-btn', 'toggle-ban-mode-btn', 'ban-slots-left', 'ban-slots-right', 'ban-list-left', 'ban-list-right', 'manage-disabled-btn', 'disabled-heroes-modal', 'disabled-heroes-list', 'clear-all-disabled-btn', 'disabled-modal-close', 'disabled-count-badge'
+    ].map(id => document.getElementById(id));
+
+    const createHeroCard = (hero) => {
+        const card = document.createElement('div');
+        card.className = 'hero-card flex flex-col items-center';
+        card.dataset.heroId = hero.id;
+        
+        // Verificar si está deshabilitado (solo para indicador visual)
+        const disabled = isHeroDisabled(hero.id);
+        if (disabled) {
+            card.classList.add('disabled');
+        }
+        
+        // Obtener icono real
+        const iconUrl = getHeroIcon(hero.name);
+        card.innerHTML = `
+            <div class="hero-image-container w-12 h-12 rounded-full border-2 border-ml-accent flex items-center justify-center bg-[#0a1e3a]">
+                <img src="${iconUrl || `https://placehold.co/64x64/051021/f0b94a?text=${hero.name.substring(0,2).toUpperCase()}`}" alt="${hero.name}" class="w-full h-full rounded-full object-cover" loading="lazy">
+                <div class="hero-overlay left-half"></div>
+                <div class="hero-overlay right-half"></div>
+            </div>
+            <span class="text-[10px] text-center mt-1 text-gray-300 leading-tight">${hero.name}</span>
+        `;
+        
+        // Click izquierdo normal - SIEMPRE permite seleccionar
+        card.addEventListener('click', (e) => {
+            if (isBanMode) {
+                banHero(hero);
+            } else {
+                const rect = e.currentTarget.querySelector('.hero-image-container').getBoundingClientRect();
+                const isRightHalf = e.clientX > rect.left + rect.width / 2;
+                addHeroToTeam(isRightHalf ? 'ally' : 'enemy', hero);
+            }
+        });
+        
+        // Click derecho para deshabilitar/habilitar (solo afecta sugerencias)
+        card.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            if (disabled) {
+                enableHero(hero.id);
+            } else {
+                disableHero(hero.id);
+            }
+        });
+        
+        return card;
+    };
+    
+    const createTeamSlot = (hero = null, team) => {
+        const slot = document.createElement('div');
+        slot.className = 'team-slot rounded-lg';
+        if (hero) {
+            slot.classList.add('filled');
+            // Crear contenedor para imagen y puntuación
+            const container = document.createElement('div');
+            container.style.display = 'flex';
+            container.style.flexDirection = 'column';
+            container.style.alignItems = 'center';
+            // Imagen real
+            const iconUrl = getHeroIcon(hero.name);
+            const img = document.createElement('img');
+            img.src = iconUrl || `https://placehold.co/48x48/0a1e3a/f0b94a?text=${hero.name.substring(0,2).toUpperCase()}`;
+            img.alt = hero.name;
+            img.className = 'w-full h-full rounded-md object-cover';
+            container.appendChild(img);
+
+            // Contador de contribución vs equipo (mostrado pequeño debajo de la imagen)
+            let contribSpan = null;
+            if (team === 'enemy') {
+                contribSpan = document.createElement('span');
+                contribSpan.className = 'text-xs mt-1 font-semibold';
+                contribSpan.style.userSelect = 'none';
+                contribSpan.textContent = '';
+                contribSpan.title = 'Contribución total contra tu equipo';
+                container.appendChild(contribSpan);
+            }
+
+            // Mostrar puntuación de counter debajo de la imagen SOLO para el equipo aliado
+            if (team === 'ally' && typeof heroRatings !== 'undefined' && enemyTeam.length > 0) {
+                let score = 0;
+                const heroData = heroRatings[hero.id];
+                if (heroData && Array.isArray(heroData.counters)) {
+                    enemyTeam.forEach(enemy => {
+                        // Buscar matchup directo
+                        let matchup = heroData.counters.find(c => c.hero === enemy.id);
+                        if (!matchup) {
+                            // Buscar inverso
+                            const enemyData = heroRatings[enemy.id];
+                            if (enemyData && Array.isArray(enemyData.counters)) {
+                                const reverse = enemyData.counters.find(c => c.hero === hero.id);
+                                if (reverse) {
+                                    matchup = { rating: -reverse.rating };
+                                }
+                            }
+                        }
+                        if (matchup) score += matchup.rating;
+                    });
+                }
+                // Asegurar que score es un número
+                if (typeof score !== 'number' || isNaN(score)) score = 0;
+                const scoreWrapper = document.createElement('div');
+                scoreWrapper.className = 'flex items-center gap-2 mt-1';
+                const scoreSpan = document.createElement('span');
+                scoreSpan.className = 'score text-xs font-bold ' + (score > 0 ? 'score-positive' : (score < 0 ? 'score-negative' : 'text-gray-400'));
+                scoreSpan.textContent = (score > 0 ? '+' : (score < 0 ? '' : '')) + score.toString();
+                scoreSpan.title = 'Haz clic para ver el análisis de counter';
+                scoreSpan.style.userSelect = 'none';
+                scoreSpan.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    openExplanationModal(hero, 'counter');
+                });
+
+                // Pequeño icono indicativo junto al número para mostrar que existe la opción de ver análisis
+                const hintBtn = document.createElement('button');
+                // Dejar solo el icono SVG sin fondo ni borde para que sea sutil
+                hintBtn.className = 'inline-flex items-center justify-center w-5 h-5 text-xs bg-transparent border-0 p-0';
+                hintBtn.title = 'Ver análisis';
+                hintBtn.style.padding = '0';
+                hintBtn.style.lineHeight = '1';
+                hintBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="w-3 h-3 text-gray-300"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.2"></circle><path d="M12 8v3" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"></path><circle cx="12" cy="15.5" r="0.6" fill="currentColor"></circle></svg>`;
+                hintBtn.addEventListener('click', (e) => { e.stopPropagation(); openExplanationModal(hero, 'counter'); });
+
+                scoreWrapper.appendChild(scoreSpan);
+                scoreWrapper.appendChild(hintBtn);
+                container.appendChild(scoreWrapper);
+            }
+            slot.appendChild(container);
+            slot.dataset.heroId = hero.id;
+            slot.dataset.team = team;
+            slot.addEventListener('click', handleSlotClick);
+            // Actualiza contador al renderizar (solo si existe contribSpan, es decir, para enemy slots)
+            if (contribSpan) {
+                const updateContrib = () => {
+                    const total = computeContributionAgainstTeam(hero, allyTeam);
+                    contribSpan.textContent = (total > 0 ? '+' : '') + total;
+                    contribSpan.className = 'text-xs mt-1 font-semibold ' + (total > 0 ? 'score-positive' : (total < 0 ? 'score-negative' : 'text-gray-400'));
+                };
+                updateContrib();
+                // Guardar referencia para futuras actualizaciones cuando cambie el equipo
+                slot._updateContrib = updateContrib;
+            }
+        }
+        return slot;
+    };
+
+    const createBanSlot = (hero = null) => {
+        const slot = document.createElement('div');
+        slot.className = 'ban-slot rounded-md';
+        if (hero) {
+            slot.classList.add('filled');
+            // Imagen real con filtro de ban
+            const iconUrl = getHeroIcon(hero.name);
+            slot.innerHTML = `<img src="${iconUrl || `https://placehold.co/48x48/0a1e3a/ef4444?text=${hero.name.substring(0,2).toUpperCase()}`}" alt="${hero.name}" class="w-full h-full rounded-md object-cover brightness-75">`;
+            slot.dataset.heroId = hero.id;
+            slot.dataset.type = 'ban';
+            slot.addEventListener('click', handleSlotClick);
+            // Añadir contador también para bans (visualmente)
+            const badge = document.createElement('div');
+            badge.className = 'absolute top-1 right-1 text-xs px-1 py-0.5 rounded bg-red-600 text-white';
+            badge.style.fontWeight = '700';
+            badge.textContent = '';
+            slot.style.position = 'relative';
+            slot.appendChild(badge);
+            slot._badge = badge;
+            const updateBadge = () => {
+                const total = computeContributionAgainstTeam(hero, allyTeam);
+                badge.textContent = (total > 0 ? '+' : '') + total;
+            };
+            updateBadge();
+            slot._updateBadge = updateBadge;
+        }
+        return slot;
+    };
+    
+    const renderHeroPool = (filter = '') => {
+        heroPoolEl.innerHTML = '';
+        const lowerCaseFilter = filter.toLowerCase();
+        heroesData
+            .filter(hero => hero.name.toLowerCase().includes(lowerCaseFilter))
+            .forEach((hero, index) => {
+                const card = createHeroCard(hero);
+                const isPicked = enemyTeam.some(h => h.id === hero.id) || allyTeam.some(h => h.id === hero.id);
+                const isBanned = bannedHeroes.some(h => h.id === hero.id);
+                if (isPicked) card.classList.add('selected');
+                if (isBanned) card.classList.add('banned');
+                card.style.animationDelay = `${index * 0.015}s`;
+                heroPoolEl.appendChild(card);
+            });
+        // después de renderizar pool, limpiar resaltados
+        clearHighlightedEnemySlots();
+    };
+
+    const renderTeams = () => {
+        enemySlotsEl.innerHTML = '';
+        allySlotsEl.innerHTML = '';
+        for (let i = 0; i < 5; i++) {
+            enemySlotsEl.appendChild(createTeamSlot(enemyTeam[i], 'enemy'));
+            allySlotsEl.appendChild(createTeamSlot(allyTeam[i], 'ally'));
+        }
+        // actualizar contadores en los slots si existen funciones guardadas
+        for (const slot of Array.from(enemySlotsEl.children)) {
+            if (slot && typeof slot._updateContrib === 'function') slot._updateContrib();
+        }
+        for (const slot of Array.from(allySlotsEl.children)) {
+            if (slot && typeof slot._updateContrib === 'function') slot._updateContrib();
+        }
+    };
+
+    const renderBans = () => {
+        // dividir en 5 a la izquierda y 5 a la derecha dentro de las listas
+        banLeftEl.querySelector('.ban-list').innerHTML = '';
+        banRightEl.querySelector('.ban-list').innerHTML = '';
+        for (let i = 0; i < 5; i++) {
+            const slot = createBanSlot(bannedHeroes[i]);
+            banLeftEl.querySelector('.ban-list').appendChild(slot);
+        }
+        for (let i = 5; i < 10; i++) {
+            const slot = createBanSlot(bannedHeroes[i]);
+            banRightEl.querySelector('.ban-list').appendChild(slot);
+        }
+        // actualizar badges
+        for (const slot of Array.from(banLeftEl.querySelectorAll('.ban-list > .ban-slot'))) {
+            if (slot && typeof slot._updateBadge === 'function') slot._updateBadge();
+        }
+        for (const slot of Array.from(banRightEl.querySelectorAll('.ban-list > .ban-slot'))) {
+            if (slot && typeof slot._updateBadge === 'function') slot._updateBadge();
+        }
+    };
+
+    const addHeroToTeam = (team, hero) => {
+        const targetTeam = team === 'enemy' ? enemyTeam : allyTeam;
+        if (targetTeam.length >= 5) return;
+        targetTeam.push(hero);
+        
+        searchInput.value = '';
+        renderHeroPool();
+        renderTeams();
+        updateAllSuggestions();
+        clearHighlightedEnemySlots();
+    };
+
+    const banHero = (hero) => {
+        if (bannedHeroes.length >= 10) return;
+        bannedHeroes.push(hero);
+        searchInput.value = '';
+        renderHeroPool();
+        renderBans();
+        updateAllSuggestions();
+        clearHighlightedEnemySlots();
+    };
+    
+    const updateAllSuggestions = () => {
+        if (typeof heroRatings === 'undefined') return;
+
+        const unavailableHeroes = [...enemyTeam, ...allyTeam, ...bannedHeroes];
+        // Filtrar también los héroes deshabilitados
+        const availableHeroes = heroesData.filter(h => 
+            !unavailableHeroes.some(p => p.id === h.id) && 
+            !isHeroDisabled(h.id)
+        );
+        
+        const counterScores = {};
+        availableHeroes.forEach(hero => {
+            let score = 0;
+            const heroData = heroRatings[hero.id];
+            if (heroData && heroData.counters) {
+                enemyTeam.forEach(enemy => {
+                    // Bidireccional: busca primero el matchup directo
+                    let matchup = heroData.counters.find(c => c.hero === enemy.id);
+                    if (!matchup) {
+                        // Si no existe, busca el inverso y cambia el signo
+                        const enemyData = heroRatings[enemy.id];
+                        if (enemyData && enemyData.counters) {
+                            const reverse = enemyData.counters.find(c => c.hero === hero.id);
+                            if (reverse) {
+                                matchup = { rating: -reverse.rating, explanation: '(Inverso) ' + (reverse.explanation || '') };
+                            }
+                        }
+                    }
+                    if (matchup) score += matchup.rating;
+                });
+            }
+            
+            // BOOST 1: +1 si es héroe meta (SS, S o A)
+            if (typeof window.isMetaHero === 'function' && window.isMetaHero(hero.id)) {
+                score += 1;
+            }
+            
+            // BOOST 2: +1 si contrarresta a los 2-3 enemigos con mayor contribución (solo cuando hay 3+ aliados)
+            if (allyTeam.length >= 3 && enemyTeam.length > 0) {
+                // Calcular contribución de cada enemigo contra el equipo aliado
+                const enemyContributions = enemyTeam.map(enemy => {
+                    let contribution = 0;
+                    const enemyData = heroRatings[enemy.id];
+                    
+                    if (enemyData && enemyData.counters) {
+                        allyTeam.forEach(ally => {
+                            const matchup = enemyData.counters.find(c => c.hero === ally.id);
+                            if (matchup && matchup.rating > 0) {
+                                contribution += matchup.rating;
+                            }
+                        });
+                    }
+                    
+                    return { id: enemy.id, contribution };
+                });
+                
+                // Ordenar por contribución descendente y tomar top 2-3
+                const topThreats = enemyContributions
+                    .sort((a, b) => b.contribution - a.contribution)
+                    .slice(0, 3)
+                    .filter(e => e.contribution > 0);
+                
+                // Verificar si este héroe contrarresta a alguno de los top threats
+                if (heroData && heroData.counters && topThreats.length > 0) {
+                    const countersTopThreat = topThreats.some(threat => {
+                        const matchup = heroData.counters.find(c => c.hero === threat.id);
+                        return matchup && matchup.rating > 0; // Solo si contrarresta positivamente
+                    });
+                    
+                    if (countersTopThreat) {
+                        score += 1;
+                    }
+                }
+            }
+            
+            counterScores[hero.id] = score;
+        });
+        const sortedCounters = Object.entries(counterScores).sort(([, a], [, b]) => b - a);
+        
+        const synergyScores = {};
+        availableHeroes.forEach(hero => {
+            let score = 0;
+            const heroData = heroRatings[hero.id];
+            if (heroData && heroData.synergies) {
+                allyTeam.forEach(ally => {
+                    let matchup = heroData.synergies.find(s => s.hero === ally.id);
+                    if (!matchup) {
+                        const allyData = heroRatings[ally.id];
+                        if (allyData && allyData.synergies) {
+                            const reverse = allyData.synergies.find(s => s.hero === hero.id);
+                            if (reverse) {
+                                matchup = { rating: reverse.rating, explanation: '(Inverso) ' + (reverse.explanation || '') };
+                            }
+                        }
+                    }
+                    if (matchup) score += matchup.rating;
+                });
+            }
+            // También sumar el inverso para sinergias (opcional, aquí se suma igual)
+            allyTeam.forEach(ally => {
+                const allyData = heroRatings[ally.id];
+                if (allyData && allyData.synergies) {
+                    const matchup = allyData.synergies.find(s => s.hero === hero.id);
+                    if (matchup) score += matchup.rating;
+                }
+            });
+            synergyScores[hero.id] = score;
+        });
+        const sortedSynergies = Object.entries(synergyScores).sort(([,a],[,b])=>b-a);
+        
+        renderSuggestionPanel(suggestionsContentEl, sortedCounters, 'counter');
+        renderSuggestionPanel(synergySuggestionsContentEl, sortedSynergies, 'synergy');
+    };
+
+    const renderSuggestionPanel = (panelEl, sortedScores, type) => {
+        panelEl.innerHTML = '';
+
+        const filterByRole = (heroId) => {
+            if (selectedRole === 'Todos') return true;
+            const hero = heroesData.find(h => h.id === heroId);
+            return hero && hero.lanes.includes(selectedRole);
+        };
+
+        // Si es panel de sinergia y no hay aliados (o hay máximo 2), mostrar héroes meta
+        if (type === 'synergy' && allyTeam.length <= 2) {
+            const metaContainer = document.createElement('div');
+            metaContainer.className = 'flex flex-col gap-3';
+            
+            // Verificar si los datos meta están cargando
+            if (typeof window.metaHeroes !== 'undefined' && window.metaHeroes.loading) {
+                metaContainer.innerHTML = `
+                    <h3 class="orbitron text-lg text-center mb-3" style="background: linear-gradient(90deg, #a855f7, #ef4444); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                        🏆 HÉROES META
+                    </h3>
+                    <div class="flex flex-col items-center justify-center py-8">
+                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mb-3"></div>
+                        <p class="text-gray-400 text-sm">Cargando héroes meta...</p>
+                    </div>
+                `;
+                panelEl.appendChild(metaContainer);
+                
+                // Reintentar en 2 segundos
+                setTimeout(() => updateAllSuggestions(), 2000);
+                return;
+            }
+            
+            const header = document.createElement('div');
+            header.innerHTML = `
+                <h3 class="orbitron text-lg text-center mb-3" style="background: linear-gradient(90deg, #a855f7, #ef4444); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                    🏆 HÉROES META - ${selectedRole.toUpperCase()}
+                </h3>
+                <p class="text-xs text-gray-400 text-center mb-3">${allyTeam.length === 0 ? 'Selecciona aliados para ver sinergias' : `Aliados: ${allyTeam.length}/5 - Aún puedes ver héroes meta`}</p>
+            `;
+            
+            const unavailableHeroes = [...enemyTeam, ...allyTeam, ...bannedHeroes];
+            
+            // Función para verificar si un héroe es exclusivo de la línea seleccionada
+            const isExclusiveLane = (meta) => {
+                const hero = heroesData.find(h => h.id === meta.id);
+                if (!hero || !meta.lane) return false;
+                
+                // Si es "Todos", no priorizar por exclusividad
+                if (selectedRole === 'Todos') return false;
+                
+                // Mapear roles a lanes de la API
+                const roleToLane = {
+                    'EXP': 'Exp Lane',
+                    'Jungla': 'Jungle',
+                    'Mid': 'Mid Lane',
+                    'Gold': 'Gold Lane',
+                    'Roam': 'Roam'
+                };
+                
+                const targetLane = roleToLane[selectedRole];
+                if (!targetLane) return false;
+                
+                // Verificar si solo tiene esa lane
+                return meta.lane.length === 1 && meta.lane[0] === targetLane;
+            };
+            
+            // Función para filtrar y ordenar héroes de un tier
+            const getFilteredHeroes = (tierHeroes) => {
+                const filtered = tierHeroes.filter(meta => {
+                    const hero = heroesData.find(h => h.id === meta.id);
+                    return hero && 
+                           !unavailableHeroes.some(p => p.id === meta.id) && 
+                           !isHeroDisabled(meta.id) &&
+                           filterByRole(meta.id);
+                });
+                
+                // Ordenar: exclusivos primero
+                return filtered.sort((a, b) => {
+                    const aExclusive = isExclusiveLane(a);
+                    const bExclusive = isExclusiveLane(b);
+                    if (aExclusive && !bExclusive) return -1;
+                    if (!aExclusive && bExclusive) return 1;
+                    return 0;
+                });
+            };
+            
+            // Obtener héroes por tier, ordenados por exclusividad
+            const tierSSHeroes = getFilteredHeroes(window.metaHeroes.tierSS || []);
+            const tierSHeroes = getFilteredHeroes(window.metaHeroes.tierS || []);
+            const tierAHeroes = getFilteredHeroes(window.metaHeroes.tierA || []);
+            
+            // Combinar en orden de prioridad, máximo 5
+            let availableMetaHeroes = [];
+            const maxHeroes = 5;
+            
+            // Agregar SS primero
+            availableMetaHeroes.push(...tierSSHeroes.slice(0, maxHeroes));
+            
+            // Si no llegamos a 5, agregar S
+            if (availableMetaHeroes.length < maxHeroes) {
+                const remaining = maxHeroes - availableMetaHeroes.length;
+                availableMetaHeroes.push(...tierSHeroes.slice(0, remaining));
+            }
+            
+            // Si aún no llegamos a 5, agregar A
+            if (availableMetaHeroes.length < maxHeroes) {
+                const remaining = maxHeroes - availableMetaHeroes.length;
+                availableMetaHeroes.push(...tierAHeroes.slice(0, remaining));
+            }
+
+            if (availableMetaHeroes.length > 0) {
+                const metaList = document.createElement('div');
+                metaList.className = 'space-y-2';
+
+                // Mostrar todos los héroes meta sin separar por tier
+                availableMetaHeroes.forEach(meta => {
+                    const hero = heroesData.find(h => h.id === meta.id);
+                    if (hero) {
+                        const tier = window.getHeroTier(meta.id);
+                        const card = createMetaHeroCard(hero, tier);
+                        metaList.appendChild(card);
+                    }
+                });
+
+                metaContainer.appendChild(header);
+                metaContainer.appendChild(metaList);
+            } else {
+                metaContainer.innerHTML = `
+                    <h3 class="orbitron text-lg text-center mb-3" style="background: linear-gradient(90deg, #a855f7, #ef4444); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                        🏆 HÉROES META - ${selectedRole.toUpperCase()}
+                    </h3>
+                    <p class="text-gray-500 text-xs text-center">No hay héroes meta disponibles para ${selectedRole}</p>
+                `;
+            }
+            
+            panelEl.appendChild(metaContainer);
+            return;
+        }
+
+        // Comportamiento normal para counters o cuando hay aliados
+        // Tomar hasta 6 mejores y 6 peores para mostrar en dos columnas
+        const bestPicks = sortedScores.filter(([id, score]) => score > 0 && filterByRole(id)).slice(0, 6);
+        const worstPicks = sortedScores.filter(([id, score]) => score < 0 && filterByRole(id)).sort(([,a],[,b])=>a-b).slice(0, 6);
+
+        // Contenedor de dos columnas
+        const grid = document.createElement('div');
+        grid.className = 'grid grid-cols-2 gap-4 h-full';
+        const leftCol = document.createElement('div');
+        leftCol.className = 'flex flex-col gap-4 h-full';
+        const rightCol = document.createElement('div');
+        rightCol.className = 'flex flex-col gap-4 h-full';
+        if (type === 'counter') {
+            // Crear bloques top/bottom que se distribuyen verticalmente
+            const leftTop = createSuggestionList('Mejores Picks', bestPicks.slice(0, Math.ceil(bestPicks.length/2)), 'positive', type);
+            const leftBottom = createSuggestionList('Peores Picks', worstPicks.slice(0, Math.ceil(worstPicks.length/2)), 'negative', type);
+            const rightTop = createSuggestionList('Mejores Picks', bestPicks.slice(Math.ceil(bestPicks.length/2)), 'positive', type);
+            const rightBottom = createSuggestionList('Peores Picks', worstPicks.slice(Math.ceil(worstPicks.length/2)), 'negative', type);
+
+            const leftWrapper = document.createElement('div');
+            leftWrapper.className = 'flex flex-col justify-between h-full';
+            leftWrapper.appendChild(leftTop);
+            leftWrapper.appendChild(leftBottom);
+
+            const rightWrapper = document.createElement('div');
+            rightWrapper.className = 'flex flex-col justify-between h-full';
+            rightWrapper.appendChild(rightTop);
+            rightWrapper.appendChild(rightBottom);
+
+            leftCol.appendChild(leftWrapper);
+            rightCol.appendChild(rightWrapper);
+        } else {
+            leftCol.appendChild(createSuggestionList(type === 'counter' ? 'Mejores Picks' : 'Mejor Sinergia', bestPicks, 'positive', type));
+            rightCol.appendChild(createSuggestionList(type === 'counter' ? 'Peores Picks' : 'Peor Sinergia', worstPicks, 'negative', type));
+        }
+        grid.appendChild(leftCol);
+        grid.appendChild(rightCol);
+        panelEl.appendChild(grid);
+    };
+
+    const createSuggestionList = (title, picks, sentiment, type) => {
+        const container = document.createElement('div');
+        container.className = 'flex flex-col w-full h-full';
+        const colorClass = sentiment === 'positive' ? 'text-green-400' : 'text-red-400';
+        const header = document.createElement('div');
+        header.className = 'flex items-center justify-between';
+        header.innerHTML = `<h3 class="orbitron text-base ${colorClass} mb-2">${title}</h3>`;
+        header.style.minHeight = '28px';
+
+        const list = document.createElement('div');
+        list.className = 'suggestion-list-container';
+
+        if (picks.length > 0) {
+            picks.forEach(([id, score]) => {
+                const hero = heroesData.find(h => h.id === id);
+                if (hero) {
+                    const item = document.createElement('div');
+                    item.className = 'suggestion-card p-2 rounded-md flex items-center justify-between gap-2';
+                    // Estructura: [imagen + nombre] [pick-btn pequeño (altura completa)] [puntuación]
+                    const left = document.createElement('div');
+                    left.className = 'flex items-center gap-2';
+                    
+                    // Obtener icono real del héroe
+                    const iconUrl = getHeroIcon(hero.name);
+                    left.innerHTML = `<img src="${iconUrl || `https://placehold.co/32x32/0a1e3a/f0b94a?text=${hero.name.substring(0,2).toUpperCase()}`}" alt="${hero.name}" class="w-7 h-7 rounded-full border border-ml-gold object-cover"><span class="font-medium text-white text-sm">${hero.name}</span>`;
+
+                    const middle = document.createElement('div');
+                    middle.style.display = 'flex';
+                    middle.style.alignItems = 'stretch';
+                    middle.style.height = '36px';
+                    // botón check que ocupa verticalmente el bloque pero es discreto
+                    const pickBtn = document.createElement('button');
+                    pickBtn.className = 'pick-btn';
+                    pickBtn.title = 'Seleccionar este héroe';
+                    pickBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"></path></svg>`;
+                    pickBtn.addEventListener('click', (e) => { e.stopPropagation(); addHeroToTeam('ally', hero); });
+                    middle.appendChild(pickBtn);
+
+                    const right = document.createElement('div');
+                    right.className = 'flex items-center';
+                    right.innerHTML = `<span class="score ${score > 0 ? 'score-positive' : 'score-negative'}">${score > 0 ? '+' : ''}${score}</span>`;
+
+                    item.appendChild(left);
+                    item.appendChild(middle);
+                    item.appendChild(right);
+                    item.addEventListener('click', () => openExplanationModal(hero, type));
+                    item.addEventListener('mouseenter', () => {
+                        const top = computeTopCounters(hero, 2);
+                        highlightEnemySlots(top);
+                    });
+                    item.addEventListener('mouseleave', () => clearHighlightedEnemySlots());
+                    list.appendChild(item);
+                }
+            });
+        } else {
+            list.innerHTML = `<p class="text-gray-500 text-xs">No hay sugerencias con la configuración actual.</p>`;
+        }
+
+        container.appendChild(header);
+        container.appendChild(list);
+        return container;
+    };
+
+    // Crear tarjeta de héroe meta
+    const createMetaHeroCard = (hero, tier) => {
+        const item = document.createElement('div');
+        item.className = 'suggestion-card p-2 rounded-md flex items-center justify-between gap-2 mb-2';
+        
+        const left = document.createElement('div');
+        left.className = 'flex items-center gap-2';
+        
+        const iconUrl = getHeroIcon(hero.name);
+        left.innerHTML = `
+            <div class="relative">
+                <img src="${iconUrl || `https://placehold.co/32x32/0a1e3a/f0b94a?text=${hero.name.substring(0,2).toUpperCase()}`}" 
+                     alt="${hero.name}" 
+                     class="w-8 h-8 rounded-full border-2 border-purple-500 object-cover">
+            </div>
+            <div>
+                <span class="font-medium text-white text-sm">${hero.name}</span>
+                <p class="text-xs text-gray-400">${hero.lanes.join(', ')}</p>
+            </div>
+        `;
+
+        const right = document.createElement('button');
+        right.className = 'pick-btn bg-gradient-to-r from-purple-600 to-purple-700 px-3 py-1 rounded-md text-white text-xs font-bold hover:scale-105 transition-transform';
+        right.textContent = 'Pick';
+        right.addEventListener('click', (e) => {
+            e.stopPropagation();
+            addHeroToTeam('ally', hero);
+        });
+
+        item.appendChild(left);
+        item.appendChild(right);
+        
+        return item;
+    };
+
+    // Calcula la contribución total de un héroe contra un equipo dado usando heroRatings si está disponible
+    const computeContributionAgainstTeam = (hero, teamArray) => {
+        if (typeof heroRatings === 'undefined' || !heroRatings[hero.id]) return 0;
+        let total = 0;
+        const data = heroRatings[hero.id];
+        const counters = data && Array.isArray(data.counters) ? data.counters : [];
+        teamArray.forEach(enemy => {
+            const m = counters.find(c => c.hero === enemy.id);
+            if (m) total += m.rating;
+            else {
+                // intentar inverso
+                const reverse = heroRatings[enemy.id] && Array.isArray(heroRatings[enemy.id].counters) ? heroRatings[enemy.id].counters.find(c => c.hero === hero.id) : null;
+                if (reverse) total -= reverse.rating; // inverso negativo
+            }
+        });
+        return Math.round(total * 100) / 100; // redondeo simple
+    };
+
+    // Dado un pick (hero), calcular cuáles son los top N enemigos (por id) que más lo contrarrestan (mayor contribución positiva para el pick)
+    const computeTopCounters = (pickHero, N = 2) => {
+        // Calculamos para cada miembro actual del enemyTeam cuánto afecta el pickHero vs ese miembro
+        const scores = [];
+        if (typeof heroRatings === 'undefined') return [];
+        const pickData = heroRatings[pickHero.id];
+        const pickCounters = pickData && Array.isArray(pickData.counters) ? pickData.counters : [];
+        enemyTeam.forEach(enemy => {
+            let s = 0;
+            const direct = pickCounters.find(c => c.hero === enemy.id);
+            if (direct) s = direct.rating;
+            else {
+                const reverse = heroRatings[enemy.id] && Array.isArray(heroRatings[enemy.id].counters) ? heroRatings[enemy.id].counters.find(c => c.hero === pickHero.id) : null;
+                if (reverse) s = -reverse.rating;
+            }
+            scores.push({ id: enemy.id, score: s });
+        });
+        // Ordenar por score descendente (más positivos = mejor para el pick)
+        scores.sort((a, b) => b.score - a.score);
+        if (scores.length === 0) return [];
+        // Tomar top N, pero incluir empates en el límite
+        const result = [];
+        let cutoff = null;
+        for (let i = 0; i < scores.length; i++) {
+            if (i < N) {
+                result.push(scores[i].id);
+                cutoff = scores[i].score;
+            } else if (scores[i].score === cutoff) {
+                result.push(scores[i].id);
+            } else break;
+        }
+        return result;
+    };
+
+    // Resaltar slots enemigos según lista de ids
+    const highlightEnemySlots = (enemyIds) => {
+        // recorrer los slots en enemySlotsEl y agregar clase
+        for (const slot of Array.from(enemySlotsEl.children)) {
+            if (!slot.dataset || !slot.dataset.heroId) continue;
+            if (enemyIds.includes(slot.dataset.heroId)) {
+                slot.classList.add('enemy-highlight');
+            }
+        }
+    };
+
+    const clearHighlightedEnemySlots = () => {
+        for (const slot of Array.from(enemySlotsEl.children)) {
+            slot.classList.remove('enemy-highlight');
+        }
+    };
+    
+    const openExplanationModal = (hero, type) => {
+        explanationContentEl.innerHTML = '';
+        let html = `<h3 class="orbitron text-xl futuristic-title mb-4 text-center">Análisis de ${hero.name}</h3>`;
+        
+        const teamToCheck = type === 'counter' ? enemyTeam : allyTeam;
+        let baseScore = 0;
+        
+        teamToCheck.forEach(teamMember => {
+            const ratings = heroRatings[hero.id];
+            let ratingData = ratings && ratings[type === 'counter' ? 'counters' : 'synergies']
+                ? ratings[type === 'counter' ? 'counters' : 'synergies'].find(r => r.hero === teamMember.id)
+                : null;
+            let isInverse = false;
+            if (!ratingData) {
+                // Buscar inverso
+                const otherRatings = heroRatings[teamMember.id];
+                if (otherRatings && otherRatings[type === 'counter' ? 'counters' : 'synergies']) {
+                    const reverse = otherRatings[type === 'counter' ? 'counters' : 'synergies'].find(r => r.hero === hero.id);
+                    if (reverse) {
+                        ratingData = {
+                            rating: -reverse.rating,
+                            explanation: `(Inverso) ${hero.name} le hace esto: ${reverse.explanation || ''}`
+                        };
+                        isInverse = true;
+                    }
+                }
+            }
+            if (ratingData) {
+                baseScore += ratingData.rating;
+                const scoreClass = ratingData.rating > 0 ? 'score-positive' : 'score-negative';
+                html += `
+                    <div class="mb-3">
+                        <div class="flex justify-between items-center">
+                            <span class="font-bold text-lg">${type === 'counter' ? 'vs' : 'con'} ${teamMember.name}</span>
+                            <span class="score ${scoreClass} text-lg">${ratingData.rating > 0 ? '+' : ''}${ratingData.rating}/5</span>
+                        </div>
+                        <p class="text-sm text-gray-300">${isInverse ? ratingData.explanation : `${hero.name} le hace esto: ${ratingData.explanation}`}</p>
+                    </div>
+                `;
+            }
+        });
+
+        // Sección de Boosts (solo para counters)
+        if (type === 'counter') {
+            let totalBoost = 0;
+            let boostExplanations = [];
+
+            // BOOST 1: Héroe Meta
+            if (typeof window.isMetaHero === 'function' && window.isMetaHero(hero.id)) {
+                totalBoost += 1;
+                const metaTier = window.getMetaTier ? window.getMetaTier(hero.id) : 'Meta';
+                boostExplanations.push(`<div class="text-xs text-gray-400 flex items-center gap-1">
+                    <span class="text-purple-400">⭐</span>
+                    <span>Tier ${metaTier} (meta actual)</span>
+                    <span class="text-purple-300 ml-auto">+1</span>
+                </div>`);
+            }
+
+            // BOOST 2: Anti-Threat
+            if (allyTeam.length >= 3 && enemyTeam.length > 0) {
+                const heroData = heroRatings[hero.id];
+                
+                // Calcular top threats
+                const enemyContributions = enemyTeam.map(enemy => {
+                    let contribution = 0;
+                    const enemyData = heroRatings[enemy.id];
+                    
+                    if (enemyData && enemyData.counters) {
+                        allyTeam.forEach(ally => {
+                            const matchup = enemyData.counters.find(c => c.hero === ally.id);
+                            if (matchup && matchup.rating > 0) {
+                                contribution += matchup.rating;
+                            }
+                        });
+                    }
+                    
+                    return { id: enemy.id, name: enemy.name, contribution };
+                });
+                
+                const topThreats = enemyContributions
+                    .sort((a, b) => b.contribution - a.contribution)
+                    .slice(0, 3)
+                    .filter(e => e.contribution > 0);
+                
+                // Verificar si contrarresta a algún top threat
+                if (heroData && heroData.counters && topThreats.length > 0) {
+                    const threatsCountered = topThreats.filter(threat => {
+                        const matchup = heroData.counters.find(c => c.hero === threat.id);
+                        return matchup && matchup.rating > 0;
+                    });
+                    
+                    if (threatsCountered.length > 0) {
+                        totalBoost += 1;
+                        const threatNames = threatsCountered.map(t => t.name).join(', ');
+                        boostExplanations.push(`<div class="text-xs text-gray-400 flex items-center gap-1">
+                            <span class="text-red-400">🎯</span>
+                            <span>Contrarresta amenaza: ${threatNames}</span>
+                            <span class="text-red-300 ml-auto">+1</span>
+                        </div>`);
+                    }
+                }
+            }
+
+            // Mostrar sección de boosts si hay alguno
+            if (totalBoost > 0) {
+                html += `
+                    <div class="mt-3 pt-3 border-t border-gray-700">
+                        ${boostExplanations.join('')}
+                    </div>
+                `;
+            }
+        }
+
+        explanationContentEl.innerHTML = html;
+        explanationModalEl.classList.add('visible');
+    };
+
+    const handleSlotClick = (e) => {
+        const slot = e.currentTarget;
+        const heroId = slot.dataset.heroId;
+        if (!heroId) return;
+
+        if (slot.dataset.type === 'ban') {
+            removeHeroFromBans(heroId);
+        } else {
+            removeHeroFromTeam(slot.dataset.team, heroId);
+        }
+    };
+
+    const removeHeroFromTeam = (team, heroId) => {
+        const targetTeam = team === 'enemy' ? enemyTeam : allyTeam;
+        const heroIndex = targetTeam.findIndex(h => h.id === heroId);
+        if (heroIndex > -1) {
+            targetTeam.splice(heroIndex, 1);
+            renderHeroPool();
+            renderTeams();
+            updateAllSuggestions();
+            clearHighlightedEnemySlots();
+        }
+    };
+    
+    const removeHeroFromBans = (heroId) => {
+        const heroIndex = bannedHeroes.findIndex(h => h.id === heroId);
+        if (heroIndex > -1) {
+            bannedHeroes.splice(heroIndex, 1);
+            renderHeroPool();
+            renderBans();
+            updateAllSuggestions();
+            clearHighlightedEnemySlots();
+        }
+    };
+    
+    const handleRoleSelection = (e) => {
+        if (e.target.matches('.role-btn')) {
+            selectedRole = e.target.dataset.role;
+            roleSelectorEl.querySelectorAll('.role-btn').forEach(btn => btn.classList.remove('active'));
+            e.target.classList.add('active');
+            updateAllSuggestions();
+        }
+    };
+    
+    const handleInitialRoleSelection = (e) => {
+        if (e.target.matches('.role-btn')) {
+            selectedRole = e.target.dataset.role;
+            roleSelectorEl.querySelector(`[data-role='${selectedRole}']`).classList.add('active');
+            initialRoleModal.classList.remove('visible');
+            appEl.classList.remove('locked');
+            updateAllSuggestions();
+        }
+    };
+    
+    const toggleBanMode = () => {
+        isBanMode = !isBanMode;
+        toggleBanModeBtn.classList.toggle('ban-active', isBanMode);
+        heroPoolEl.classList.toggle('ban-mode-active', isBanMode);
+        heroPoolEl.classList.toggle('ban-mode-inactive', !isBanMode);
+        toggleBanModeBtn.textContent = isBanMode ? 'MODO PICK' : 'MODO BANEO';
+    };
+
+    const resetDraft = () => {
+        enemyTeam = [];
+        allyTeam = [];
+        bannedHeroes = [];
+        searchInput.value = '';
+        
+        if (isBanMode) toggleBanMode();
+
+        initialRoleModal.classList.add('visible');
+        appEl.classList.add('locked');
+        roleSelectorEl.querySelectorAll('.role-btn').forEach(btn => btn.classList.remove('active'));
+        roleSelectorEl.querySelector(`[data-role='Todos']`).classList.add('active');
+        renderHeroPool();
+        renderTeams();
+        renderBans();
+        updateAllSuggestions();
+        clearHighlightedEnemySlots();
+    };
+
+    // === GESTIÓN DE MODAL DE HÉROES DESHABILITADOS ===
+    const openDisabledHeroesModal = () => {
+        renderDisabledHeroesList();
+        disabledHeroesModal.classList.add('visible');
+    };
+
+    const closeDisabledHeroesModal = () => {
+        disabledHeroesModal.classList.remove('visible');
+    };
+
+    const renderDisabledHeroesList = () => {
+        disabledHeroesList.innerHTML = '';
+        
+        if (disabledHeroes.length === 0) {
+            disabledHeroesList.innerHTML = '<p class="text-center text-gray-400 py-8">No hay héroes ocultos. Todos aparecen en las sugerencias.</p>';
+            return;
+        }
+
+        disabledHeroes.forEach(heroId => {
+            const hero = heroesData.find(h => h.id === heroId);
+            if (hero) {
+                const iconUrl = getHeroIcon(hero.name);
+                const item = document.createElement('div');
+                item.className = 'disabled-hero-item';
+                item.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <img src="${iconUrl || `https://placehold.co/48x48/0a1e3a/f0b94a?text=${hero.name.substring(0,2).toUpperCase()}`}" 
+                             alt="${hero.name}" 
+                             class="w-10 h-10 rounded-full border border-ml-gold">
+                        <div>
+                            <span class="font-medium text-white">${hero.name}</span>
+                            <p class="text-xs text-gray-400">${hero.lanes.join(', ')} • Seleccionable manualmente</p>
+                        </div>
+                    </div>
+                    <button class="enable-hero-btn" data-hero-id="${heroId}">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 inline mr-1">
+                            <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            <path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                        </svg>
+                        Mostrar
+                    </button>
+                `;
+                disabledHeroesList.appendChild(item);
+            }
+        });
+
+        // Event listeners para los botones de habilitar
+        disabledHeroesList.querySelectorAll('.enable-hero-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const heroId = btn.dataset.heroId;
+                enableHero(heroId);
+                renderDisabledHeroesList();
+            });
+        });
+    };
+
+    const clearAllDisabledHeroes = () => {
+        if (confirm('¿Estás seguro de que quieres mostrar todos los héroes en las sugerencias?')) {
+            disabledHeroes = [];
+            saveDisabledHeroes();
+            renderHeroPool();
+            updateAllSuggestions();
+            renderDisabledHeroesList();
+            updateDisabledCountBadge();
+        }
+    };
+
+    // --- Event Listeners ---
+    document.getElementById('explanation-modal-close').addEventListener('click', () => explanationModalEl.classList.remove('visible'));
+    resetDraftBtn.addEventListener('click', resetDraft);
+    toggleBanModeBtn.addEventListener('click', toggleBanMode);
+    searchInput.addEventListener('input', (e) => renderHeroPool(e.target.value));
+    roleSelectorEl.addEventListener('click', handleRoleSelection);
+    initialRoleSelector.addEventListener('click', handleInitialRoleSelection);
+    
+    // Nuevos event listeners para héroes deshabilitados
+    manageDisabledBtn.addEventListener('click', openDisabledHeroesModal);
+    disabledModalClose.addEventListener('click', closeDisabledHeroesModal);
+    clearAllDisabledBtn.addEventListener('click', clearAllDisabledHeroes);
+
+    // --- Initial Render ---
+    renderHeroPool();
+    renderTeams();
+    renderBans();
+    updateAllSuggestions();
+    updateDisabledCountBadge();
+});
+    </script>
+</body>
+</html>
+

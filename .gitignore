@@ -1,0 +1,107 @@
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+
+# Build output
+dist/
+build/
+*.min.js
+*.min.css
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment
+.env
+.env.local
+.env.production
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Backup files
+*.bak
+*.backup
+
+# Scripts de utilidad local (no necesarios en repo)
+limpiar.bat
+
+# Archivos consolidados (mantener solo versión completa)
+DOCUMENTACION.md
+INICIO_RAPIDO.md
+DOMINIO_GRATIS.md
+
+# ============================================================
+# PROTECCIÓN DE CÓDIGO - NO SUBIR ARCHIVOS ORIGINALES
+# ============================================================
+
+# Archivos JavaScript originales (SIN OFUSCAR)
+# Los archivos en raíz son OFUSCADOS y sí se suben
+src/
+
+# Backups de archivos originales (sin ofuscar)
+original-backup/
+protected/
+*.original.js
+*.dev.js
+*.source.js
+
+# Source maps (revelan código original)
+*.map
+*.js.map
+
+# Scripts de desarrollo local
+build-protected.bat
+build-for-github.bat
+test-protection.html
+
+# Configuración de ofuscación
+obfuscator-config.json
+
+# Node.js (herramientas de desarrollo)
+node_modules/
+package.json
+package-lock.json
+npm-debug.log*
+
+# ============================================================
+# ARCHIVOS DE DESARROLLO (NO SUBIR)
+# ============================================================
+
+# Carpeta de archivos archivados
+_archive/
+
+# Scripts de build y testing
+build-simple.bat
+test-movil.bat
+*.bat
+
+# Documentación de desarrollo
+REORGANIZACION_COMPLETADA.md
+SITUACION_BUILD.md
+DOMINIO_CONFIGURACION.md
+ASSETS_GUIDE.md
+ASSETS_COMPLETADOS.md
+ACCESSIBILITY.md
+CHANGELOG.md
+CONTRIBUTING.md
+RESUMEN_FINAL.md
+CHECKLIST_DEPLOY.md
