@@ -92,6 +92,7 @@ _archive/
 # Scripts de build y testing
 build-simple.bat
 test-movil.bat
+test-data.html
 *.bat
 
 # Documentación de desarrollo
