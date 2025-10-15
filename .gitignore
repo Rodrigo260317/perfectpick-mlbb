@@ -43,6 +43,10 @@ yarn-error.log*
 
 # Scripts de utilidad local (no necesarios en repo)
 limpiar.bat
+download_*.py
+*_local.js
+debug-*.js
+test-*.html
 
 # Archivos consolidados (mantener solo versión completa)
 DOCUMENTACION.md

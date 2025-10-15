@@ -1344,36 +1344,6 @@
     <script src="heroIcons.js"></script>
     <script src="meta_heroes.js"></script>
     
-    <!-- DEBUG: Verificación de carga -->
-    <script>
-        console.log('🔍 Verificando carga de datos...');
-        
-        // Verificar heroIcons
-        setTimeout(() => {
-            if (typeof heroIcons !== 'undefined' && Array.isArray(heroIcons)) {
-                console.log(`✅ heroIcons cargado: ${heroIcons.length} héroes`);
-                console.log('📊 Ejemplo:', heroIcons[0]);
-                
-                // Probar carga de imagen
-                const img = new Image();
-                img.onload = () => console.log('✅ Imágenes funcionan:', heroIcons[0].icon);
-                img.onerror = () => console.error('❌ PROBLEMA CORS - Imágenes bloqueadas:', heroIcons[0].icon);
-                img.src = heroIcons[0].icon;
-            } else {
-                console.error('❌ heroIcons NO cargado');
-            }
-        }, 100);
-        
-        // Verificar metaHeroes
-        setTimeout(() => {
-            if (typeof window.metaHeroes !== 'undefined') {
-                console.log(`✅ metaHeroes cargado: SS=${window.metaHeroes.tierSS.length}, S=${window.metaHeroes.tierS.length}`);
-            } else {
-                console.error('❌ metaHeroes NO cargado');
-            }
-        }, 200);
-    </script>
-    
     <script>
     document.addEventListener('DOMContentLoaded', () => {
 
